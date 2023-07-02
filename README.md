@@ -13,3 +13,5 @@ Feed The Bunny е возбудлива и предизвикувачка игр�
 
 #### Изглед на играта:
 ![image](https://github.com/SaraVasileva/feed-the-bunny-game/assets/127666693/a77067a7-7bc6-4247-a381-77d3fe2ea542)
+#### Изглед на играта по завршување:
+![image](https://github.com/SaraVasileva/feed-the-bunny-game/assets/127666693/2a7420a1-657e-4248-a64f-db01752c6a06)
