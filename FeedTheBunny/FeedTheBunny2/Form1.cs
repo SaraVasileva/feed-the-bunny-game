@@ -15,6 +15,7 @@ using static FeedTheBunny.Form1;
 
 namespace FeedTheBunny
 {
+
     public partial class Form1 : Form
     {
         private PictureBox rabbitPictureBox;
@@ -34,11 +35,68 @@ namespace FeedTheBunny
         int lives = 3;
         int cabbageCount = 0;
         public int level = 1;
+        private bool isGameRunning = false;
+        private SoundPlayer catchSound;
+        private SoundPlayer redbullSound;
+        private SoundPlayer bombSound;
+        private SoundPlayer loseSound;
+        private SoundPlayer lifeGain;
+        private SoundPlayer startGame;
+        private SoundPlayer jump;
+
+
         public Form1()
         {
             InitializeComponent();
             InitializeGame();
+
+            catchSound = new SoundPlayer("quick-pop.wav");
+            lifeGain = new SoundPlayer("lifeGain.wav");
+            redbullSound = new SoundPlayer("redbull.wav");
+            bombSound = new SoundPlayer("Small Bomb Explosion Sound Effect.wav");
+            loseSound = new SoundPlayer("Lose sound effects.wav");
+            startGame = new SoundPlayer("startGame.wav");
+            jump = new SoundPlayer("jump.wav");
+            startGame.Play();
             DoubleBuffered = true;
+        }
+        protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
+        {
+            if (keyData == Keys.Enter)
+            {
+                if (!isGameRunning)
+                {
+                    StartGame();
+                    isGameRunning = true;
+                }
+                return true;
+            }
+            else if (keyData == Keys.P)
+            {
+                if (isGameRunning)
+                {
+                    PauseGame();
+                    isGameRunning = false;
+                }
+                return true;
+            }
+            return base.ProcessCmdKey(ref msg, keyData);
+        }
+        private void StartGame()
+        {
+            timer1.Start();
+            label3.Text = "";
+            isGameRunning = true;
+
+        }
+
+        private void PauseGame()
+        {
+            timer1.Stop();          
+            label3.Text = "PRESS ENTER\nTO UNPAUSE\nPRESS R FOR RULES";
+            label3.Location = new Point((ClientSize.Width / 2) - label3.Width / 2, (ClientSize.Height / 2) - label3.Height);
+            isGameRunning = false;
+
         }
         public void InitializeGame()
         {
@@ -50,47 +108,50 @@ namespace FeedTheBunny
             rabbitPictureBox.BackColor = Color.Transparent;
             Controls.Add(rabbitPictureBox);
             fallingObjects = new List<FallingObject>();
+            label3.Text = "PRESS ENTER \r\nTO START GAME\r\nPRESS R FOR RULES\r\n";
+            label3.Location = new Point((ClientSize.Width / 2)-label3.Width/2, (ClientSize.Height / 2)-label3.Height);
             timer1.Start();
             jumps = 0;
             carrotCount = 0;
-
-            
-
         }
         private void timer1_Tick(object sender, EventArgs e)
         {
             label1.Text = $"Points: {points}";
             label2.Text = $"Jumps: {jumps}";
-            timerTick++;
-            if (timerTick % spawnInterval == 0)
-            {
-                SpawnObject();
-            }
-            if (goLeft)
-            {
-                if (rabbitPictureBox.Left > 0)
+            if (isGameRunning)
+            { 
+                timerTick++;
+                if (timerTick % spawnInterval == 0)
                 {
-                    rabbitPictureBox.Left -= RabbitSpeed;
+                    SpawnObject();
                 }
-            }
-            if (goRight)
-            {
-                if (rabbitPictureBox.Right < ClientSize.Width)
+                if (goLeft)
                 {
-                    rabbitPictureBox.Left += RabbitSpeed;
+                    if (rabbitPictureBox.Left > 0)
+                    {
+                        rabbitPictureBox.Left -= RabbitSpeed;
+                    }
                 }
+                if (goRight)
+                {
+                    if (rabbitPictureBox.Right < ClientSize.Width)
+                    {
+                        rabbitPictureBox.Left += RabbitSpeed;
+                    }
+                }
+                CheckLevel();
+                MoveObjects();
+                CheckCollision();
+                UpdateRedbull();
+                CheckGameOver();
+                CheckLives();
             }
-            CheckLevel();
-            MoveObjects();
-            CheckCollision();
-            UpdateRedbull();
-            CheckGameOver();
-            CheckLives();
+          
         }
 
         private void CheckLevel()
         {
-            if (level < 5)
+            if (level < 6)
             {
                 level = points / 250;
             }               
@@ -100,9 +161,11 @@ namespace FeedTheBunny
                 case 1: this.BackColor = Color.LightBlue; break;
                 case 2: this.BackColor = Color.Orange; spawnInterval = 17; break;
                 case 3: this.BackColor = Color.PaleVioletRed; spawnInterval = 15; break;
-                default: this.BackColor = Color.IndianRed; break;
+                case 4: this.BackColor = Color.IndianRed; spawnInterval = 12; break;
+                default: this.BackColor = Color.OrangeRed; spawnInterval = 10; break;
             }
         }
+        
 
         public void CheckLives()
         {
@@ -149,13 +212,40 @@ namespace FeedTheBunny
             {
                 if (jumps > 0)
                 {
+                    
                     if (goLeft && rabbitPictureBox.Location.X - 150 > 50)
+                    {
+                        jump.Play();
                         rabbitPictureBox.Location = new Point(rabbitPictureBox.Location.X - 150, rabbitPictureBox.Location.Y);
+                        jumps--;
+                    }
                     if (goRight && rabbitPictureBox.Location.X + 150 < ClientSize.Width - 65)
+                    {
+                        jump.Play();
                         rabbitPictureBox.Location = new Point(rabbitPictureBox.Location.X + 150, rabbitPictureBox.Location.Y);
-                    jumps--;
+                        jumps--;
+                    }
+                    
                 }
                 
+            }
+            if(e.KeyCode == Keys.R) 
+            {
+                if (!isGameRunning)
+                {
+                    MessageBox.Show($"Navigate with LEFT and RIGHT keys\nPress SPACE to jump\n5 carrots = 1 jump\n5 cabbages = 1 life\nPress P to pause\nPress ESCAPE to restart", "Rules", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+            }
+            if (e.KeyCode == Keys.Escape) {
+                isGameRunning = false;
+                DialogResult answer = MessageBox.Show($"Do you want to restart?", "Restart", MessageBoxButtons.YesNo, MessageBoxIcon.Information);
+                if(answer == DialogResult.Yes)
+                {
+                    RestartGame();
+                } else
+                {
+                    PauseGame();
+                }
             }
             
         }
@@ -168,15 +258,16 @@ namespace FeedTheBunny
                     switch (fallingObject)
                     {
                         case Carrot carrot:
+                            catchSound.Play();
                             points += 5;
                             carrotCount++;
                             if (carrotCount % 5 == 0)
                             {
                                 jumps++;
                             }
-                            
                             break;
                         case Cabbage cabbage:
+                            catchSound.Play();
                             points += 2;
                             cabbageCount++;
                             if ( cabbageCount % 5 == 0)
@@ -184,16 +275,18 @@ namespace FeedTheBunny
                                 if (lives < 3)
                                 {
                                     lives++;
+                                    lifeGain.Play();
                                 }
                             }
-                            
                             break;
                         case Bomb bomb:
+                            bombSound.Play();
                             misses += 5;
                             lives--;
                             break;
                         case Redbull redbull:
                             isRedbullActive = true;
+                            redbullSound.Play();
                             redbullTimer = 250;
                             if (rabbitPictureBox.Image == Properties.Resources.rabbitLeft)
                             {
@@ -220,10 +313,48 @@ namespace FeedTheBunny
             if (lives == 0)
             {
                 timer1.Stop();
-                MessageBox.Show($"Game Over! Your score: {points}\n Your misses: {misses}", "Game Over", MessageBoxButtons.OK,
-                    MessageBoxIcon.Information);
-                Close();
+                loseSound.Play();
+                DialogResult result = MessageBox.Show($"Game Over! Your score: {points}\nDo you want to play again?", "Game Over", MessageBoxButtons.YesNo, MessageBoxIcon.Information);
+                if (result == DialogResult.Yes)
+                {
+                    RestartGame();
+                }
+                else
+                {
+                    Close();
+                }
             }
+        }
+
+        private void RestartGame()
+        {
+            timerTick = 0;
+            misses = 0;
+            points = 0;
+            redbullTimer = 0;
+            isRedbullActive = false;
+            lives = 3;
+            jumps = 0;
+            carrotCount = 0;
+            cabbageCount = 0;
+            level = 1;
+            spawnInterval = 20;
+            isGameRunning = false;
+            rabbitPictureBox.Location = new Point((ClientSize.Width - 100) / 2, ClientSize.Height - 120);
+            rabbitPictureBox.Image = Properties.Resources.rabbit;
+            rabbitPictureBox.Size = new Size(100, 100);
+            rabbitPictureBox.SizeMode = PictureBoxSizeMode.StretchImage;
+            rabbitPictureBox.BackColor = Color.Transparent;
+            Controls.Add(rabbitPictureBox);
+            fallingObjects.ForEach(obj => { obj.Dispose(); });
+            fallingObjects = new List<FallingObject>();
+            timer1.Start();
+            label3.Text = "PRESS ENTER \r\nTO START GAME\r\nPRESS R FOR RULES\r\n";
+            label3.Location = new Point((ClientSize.Width / 2) - label3.Width / 2, (ClientSize.Height / 2) - label3.Height);
+            this.BackColor = Color.LightGreen;
+            pictureBox1.Image = Properties.Resources.heart_pixel_art_254x254;
+            pictureBox2.Image = Properties.Resources.heart_pixel_art_254x254;
+            pictureBox3.Image = Properties.Resources.heart_pixel_art_254x254;
         }
         private void SpawnObject()
         {
@@ -233,29 +364,45 @@ namespace FeedTheBunny
             {
                 Carrot c = new Carrot(point);
                 c.Speed += level;
+                if (points > 1500)
+                {
+                    c.Speed++;
+                }
                 fallingObjects.Add(c);
-                Controls.Add(c.GetPictureBox()); // Add PictureBox to form controls
+                Controls.Add(c.GetPictureBox()); 
             }
             else if (k >= 13 && k < 16)
             {
                 Cabbage cabbage = new Cabbage(point);
-                cabbage.Speed += level;                
+                cabbage.Speed += level;
+                if (points > 1500)
+                {
+                    cabbage.Speed++;
+                }
                 fallingObjects.Add(cabbage);
-                Controls.Add(cabbage.GetPictureBox()); // Add PictureBox to form controls
+                Controls.Add(cabbage.GetPictureBox()); 
             }
             else if (k >= 16 && k < 21)
             {
                 Bomb bomb = new Bomb(point);
                 bomb.Speed += level;
+                if (points > 1500)
+                {
+                    bomb.Speed++;
+                }
                 fallingObjects.Add(bomb);
-                Controls.Add(bomb.GetPictureBox()); // Add PictureBox to form controls
+                Controls.Add(bomb.GetPictureBox()); 
             }
             else
             {
                 Redbull rd = new Redbull(point);
                 rd.Speed += level;
+                if (points > 1500)
+                {
+                    rd.Speed++;
+                }
                 fallingObjects.Add(rd);
-                Controls.Add(rd.GetPictureBox()); // Add PictureBox to form controls
+                Controls.Add(rd.GetPictureBox()); 
             }
         }
         private void UpdateRedbull()
@@ -312,20 +459,6 @@ namespace FeedTheBunny
 
             fallingObjects.RemoveAll(f => f.Bounds.Bottom >= ClientSize.Height);
         }
-        
-
-        public void RestartGame()
-        {
-            foreach (Control x in this.Controls)
-            {
-                //if (x is PictureBox && (string)x.Tag==x)
-                //{
-                //    x.Enabled = false;
-                //}
-            }
-        }
-        
-                
 
         public abstract class FallingObject : IDisposable
         {
@@ -500,22 +633,7 @@ namespace FeedTheBunny
         {
 
         }
-        /*public class FallingObjectPictureBox : PictureBox
-{
-   public Image OriginalImage { get; set; }
 
-   protected override void OnPaint(PaintEventArgs e)
-   {
-       using (var brush = new SolidBrush(this.BackColor))
-       {
-           e.Graphics.FillRectangle(brush, e.ClipRectangle);
-       }
-
-       if (OriginalImage != null)
-       {
-           e.Graphics.DrawImage(OriginalImage, 0, 0, this.Width, this.Height);
-       }
-   }
-}*/
+        
     }
 }
